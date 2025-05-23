@@ -2,56 +2,47 @@ version: '3.8'
 
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: restaurant_app
+    image: laravelsail/php82-composer:latest
+    container_name: laravel_app
     restart: unless-stopped
-    tty: true
-    environment:
-      - APP_ENV=production
-      - APP_DEBUG=false
-    ports:
-      - "8000:80"
+    working_dir: /var/www
     volumes:
-      - ./storage:/var/www/html/storage
-      - ./bootstrap/cache:/var/www/html/bootstrap/cache
+      - ./:/var/www
     networks:
-      - restaurant_network
-    depends_on:
-      - db
-      - redis
+      - laravel
 
-  db:
-    image: mysql:8.0
-    container_name: restaurant_db
+  webserver:
+    image: nginx:alpine
+    container_name: nginx_web
     restart: unless-stopped
-    tty: true
+    ports:
+      - "80:80"
+    volumes:
+      - ./:/var/www
+      - ./docker/nginx/conf.d:/etc/nginx/conf.d
+    depends_on:
+      - app
+    networks:
+      - laravel
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql_db
+    restart: unless-stopped
     ports:
       - "3306:3306"
     environment:
-      MYSQL_DATABASE: restaurant_db
-      MYSQL_ROOT_PASSWORD: password
-      MYSQL_PASSWORD: password
-      MYSQL_USER: restaurant_user
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: laravel
+      MYSQL_USER: laravel
+      MYSQL_PASSWORD: laravel
     volumes:
-      - db_data:/var/lib/mysql
+      - mysql_data:/var/lib/mysql
     networks:
-      - restaurant_network
-
-  redis:
-    image: redis:7-alpine
-    container_name: restaurant_redis
-    restart: unless-stopped
-    ports:
-      - "6379:6379"
-    networks:
-      - restaurant_network
+      - laravel
 
 networks:
-  restaurant_network:
-    driver: bridge
+  laravel:
 
 volumes:
-  db_data:
-    driver: local
+  mysql_data:
